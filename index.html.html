@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Haven Cafe Billing</title>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        @media print {
+            .no-print { display: none; }
+            .print-only { display: block; }
+        }
+        .print-only { display: none; }
+    </style>
+</head>
+<body class="bg-[#FFF9E6] min-h-screen font-sans">
+    <div id="root"></div>
+    <script type="text/babel" data-presets="react">
+        const MENU = {
+            "Tea": { price: 25.00, category: "Tea" },
+            "Ginger Tea": { price: 29.00, category: "Tea" },
+            "Black Tea": { price: 25.00, category: "Tea" },
+            "Green Tea": { price: 39.00, category: "Tea" },
+            "Sea Buckthorn Tea": { price: 79.00, category: "Tea" },
+            "Coffee": { price: 39.00, category: "Coffee" },
+            "Cappuccino": { price: 79.00, category: "Coffee" },
+            "Americano": { price: 39.00, category: "Coffee" },
+            "Hazelnut Latte": { price: 79.00, category: "Coffee" },
+            "Irish Latte": { price: 79.00, category: "Coffee" },
+            "Butterscotch Latte": { price: 79.00, category: "Coffee" },
+            "Hot Chocolate": { price: 39.00, category: "Coffee" },
+            "Fresh Lime": { price: 59.00, category: "Fresh Lime & Wiggles" },
+            "Ice Tea": { price: 59.00, category: "Fresh Lime & Wiggles" },
+            "Peach Ice Tea": { price: 99.00, category: "Fresh Lime & Wiggles" },
+            "Virgin Mojito": { price: 79.00, category: "Fresh Lime & Wiggles" },
+            "Mint Mojito": { price: 79.00, category: "Fresh Lime & Wiggles" },
+            "Watermelon Mojito": { price: 79.00, category: "Fresh Lime & Wiggles" },
+            "Green Apple Mojito": { price: 99.00, category: "Fresh Lime & Wiggles" },
+            "Blue Lagoon": { price: 99.00, category: "Fresh Lime & Wiggles" },
+            "Street Fighter": { price: 55.00, category: "Served with Wedges" },
+            "Crispy Paneer": { price: 99.00, category: "Served with Wedges" },
+            "Cheese Buster": { price: 79.00, category: "Served with Wedges" },
+            "Big Daddy": { price: 169.00, category: "Served with Wedges", isPizza: true },
+            "Spinach Corn": { price: 149.00, category: "Served with Wedges" },
+            "Indiana Paneer": { price: 99.00, category: "Served with Wedges" },
+            "Sri Lankan Grill": { price: 139.00, category: "Served with Wedges" },
+            "Haven Special": { price: 179.00, category: "Served with Wedges", isPizza: true },
+            "Aloo Tikki": { price: 99.00, category: "Always" },
+            "Tandoori Paneer": { price: 159.00, category: "Always" },
+            "Poco Loco": { price: 159.00, category: "Always" },
+            "Fresh Veg Club": { price: 69.00, category: "Sandwiches" },
+            "Grilled Veg Club": { price: 79.00, category: "Sandwiches" },
+            "Cheese Grill": { price: 99.00, category: "Sandwiches" },
+            "Classic Arrabbiata": { price: 99.00, category: "Red Sauce" },
+            "Cheese Balls Arrabbiata": { price: 149.00, category: "Red Sauce" },
+            "Fresh Veggie Arrabbiata": { price: 149.00, category: "Red Sauce" },
+            "Classic Alfredo": { price: 149.00, category: "White Sauce" },
+            "Mushroom Alfredo": { price: 179.00, category: "White Sauce" },
+            "Fresh Veggies Alfredo": { price: 149.00, category: "White Sauce" },
+            "Mix Sauce": { price: 159.00, category: "Mix Sauce" }
+        };
+
+        const PIZZA_SIZES = { "Small": 1.0, "Medium": 1.5, "Large": 2.0 };
+        const PAYMENT_MODES = ["Cash", "Card", "UPI"];
+
+        const MenuItem = ({ name, price, isPizza, addToOrder }) => {
+            const [size, setSize] = React.useState("Small");
+
+            return (
+                <div className="flex flex-col p-3 bg-white rounded-lg shadow-sm mb-2">
+                    <div className="flex justify-between items-center">
+                        <div>
+                            <span className="text-base font-medium text-gray-800">{name}</span>
+                            <p className="text-sm text-gray-600">₹{price.toFixed(2)}</p>
+                        </div>
+                        <div className="flex items-center">
+                            {isPizza && (
+                                <select 
+                                    value={size} 
+                                    onChange={(e) => setSize(e.target.value)}
+                                    className="mr-2 p-1 border rounded text-sm"
+                                >
+                                    {Object.keys(PIZZA_SIZES).map(s => (
+                                        <option key={s} value={s}>{s}</option>
+                                    ))}
+                                </select>
+                            )}
+                            <button 
+                                onClick={() => addToOrder(name, isPizza ? size : null)}
+                                className="bg-green-500 text-white px-4 py-1 rounded hover:bg-green-600 transition-colors"
+                            >
+                                + Add
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const OrderSummary = ({ order, total, clearOrder, submitOrder, printOrder }) => {
+            const [customerName, setCustomerName] = React.useState("");
+            const [mobileNumber, setMobileNumber] = React.useState("");
+            const [paymentMode, setPaymentMode] = React.useState("");
+            const [tableNumber, setTableNumber] = React.useState("");
+
+            const handleSubmit = () => {
+                if (!customerName || !tableNumber || !paymentMode) {
+                    alert("Please fill in Customer Name, Table Number, and Payment Mode.");
+                    return;
+                }
+                const orderData = { order, total, customerName, mobileNumber, paymentMode, tableNumber };
+                submitOrder(orderData);
+            };
+
+            return (
+                <div className="bg-white p-6 rounded-lg shadow-md h-full flex flex-col">
+                    <h2 className="text-xl font-bold mb-4 text-gray-800">Current Order</h2>
+                    <div className="flex gap-4 mb-4">
+                        <div className="flex-1">
+                            <label className="block text-sm font-medium text-gray-700">Table Number</label>
+                            <input 
+                                type="number" 
+                                value={tableNumber} 
+                                onChange={(e) => setTableNumber(e.target.value)}
+                                className="mt-1 p-2 border rounded w-full"
+                                placeholder="Enter table number"
+                            />
+                        </div>
+                        <div className="flex-1">
+                            <label className="block text-sm font-medium text-gray-700">Customer Name</label>
+                            <input 
+                                type="text" 
+                                value={customerName} 
+                                onChange={(e) => setCustomerName(e.target.value)}
+                                className="mt-1 p-2 border rounded w-full"
+                                placeholder="Enter name"
+                            />
+                        </div>
+                    </div>
+                    <div className="mb-4">
+                        <label className="block text-sm font-medium text-gray-700">Mobile Number (Optional)</label>
+                        <input 
+                            type="text" 
+                            value={mobileNumber} 
+                            onChange={(e) => setMobileNumber(e.target.value)}
+                            className="mt-1 p-2 border rounded w-full"
+                            placeholder="Enter mobile number"
+                        />
+                    </div>
+                    <div className="flex-1 overflow-y-auto max-h-[40vh]">
+                        {Object.keys(order).length === 0 ? (
+                            <p className="text-gray-500 text-center">No items in order yet. Add items from menu.</p>
+                        ) : (
+                            Object.entries(order).map(([key, qty]) => {
+                                const [item, size] = key.split("|");
+                                const price = MENU[item].price * (size ? PIZZA_SIZES[size] : 1);
+                                return (
+                                    <div key={key} className="flex justify-between mb-2 text-sm">
+                                        <span>{item} {size ? `(${size})` : ""} x{qty}</span>
+                                        <span>₹{(price * qty).toFixed(2)}</span>
+                                    </div>
+                                );
+                            })
+                        )}
+                    </div>
+                    <div className="mt-4 border-t pt-4">
+                        <h3 className="text-lg font-semibold text-gray-800 mb-2">Order Summary</h3>
+                        <div className="flex justify-between font-bold text-lg">
+                            <span>Total</span>
+                            <span>₹{total.toFixed(2)}</span>
+                        </div>
+                        <div className="mt-4">
+                            <label className="block text-sm font-medium text-gray-700">Payment Mode</label>
+                            <select 
+                                value={paymentMode} 
+                                onChange={(e) => setPaymentMode(e.target.value)}
+                                className="mt-1 p-2 border rounded w-full"
+                            >
+                                <option value="">Select payment mode</option>
+                                {PAYMENT_MODES.map(mode => (
+                                    <option key={mode} value={mode}>{mode}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className="print-only mt-4 p-4 border-t">
+                            <h3 className="text-lg font-bold">Haven Cafe Receipt</h3>
+                            <p>Table: {tableNumber}</p>
+                            <p>Name: {customerName}</p>
+                            <p>Mobile: {mobileNumber || "N/A"}</p>
+                            <p>Payment: {paymentMode}</p>
+                            <p>Date: {new Date().toLocaleString()}</p>
+                            {Object.entries(order).map(([key, qty]) => {
+                                const [item, size] = key.split("|");
+                                const price = MENU[item].price * (size ? PIZZA_SIZES[size] : 1);
+                                return (
+                                    <p key={key}>{item} {size ? `(${size})` : ""} x{qty}: ₹{(price * qty).toFixed(2)}</p>
+                                );
+                            })}
+                            <p className="font-bold">Total: ₹{total.toFixed(2)}</p>
+                        </div>
+                        <button 
+                            onClick={handleSubmit}
+                            className="mt-4 w-full bg-green-600 text-white py-2 rounded hover:bg-green-700 transition-colors no-print"
+                        >
+                            Submit Order
+                        </button>
+                        <button 
+                            onClick={printOrder}
+                            className="mt-2 w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition-colors no-print"
+                        >
+                            Print Receipt
+                        </button>
+                        <button 
+                            onClick={clearOrder}
+                            className="mt-2 w-full bg-red-600 text-white py-2 rounded hover:bg-red-700 transition-colors no-print"
+                        >
+                            Clear Order
+                        </button>
+                    </div>
+                </div>
+            );
+        };
+
+        const App = () => {
+            const [order, setOrder] = React.useState({});
+            const [searchTerm, setSearchTerm] = React.useState("");
+            const [expandedCategories, setExpandedCategories] = React.useState({});
+
+            const addToOrder = (item, size) => {
+                const key = size ? `${item}|${size}` : item;
+                setOrder(prev => ({
+                    ...prev,
+                    [key]: (prev[key] || 0) + 1
+                }));
+            };
+
+            const clearOrder = () => setOrder({});
+
+            const submitOrder = (orderData) => {
+                console.log("Order submitted:", orderData);
+                alert("Order submitted! Check console for details.");
+                setOrder({});
+            };
+
+            const printOrder = () => {
+                window.print();
+            };
+
+            const total = Object.entries(order).reduce((sum, [key, qty]) => {
+                const [item, size] = key.split("|");
+                const price = MENU[item].price * (size ? PIZZA_SIZES[size] : 1);
+                return sum + price * qty;
+            }, 0);
+
+            const filteredMenu = Object.entries(MENU).filter(([name]) =>
+                name.toLowerCase().includes(searchTerm.toLowerCase())
+            );
+
+            const categories = [...new Set(Object.values(MENU).map(item => item.category))];
+
+            const toggleCategory = (category) => {
+                setExpandedCategories(prev => ({
+                    ...prev,
+                    [category]: !prev[category]
+                }));
+            };
+
+            return (
+                <div className="min-h-screen">
+                    {/* Header */}
+                    <header className="bg-[#8B4513] text-white p-4 flex justify-between items-center">
+                        <div className="flex items-center">
+                            <span className="text-2xl mr-2">☕</span>
+                            <h1 className="text-2xl font-bold">Haven Cafe</h1>
+                        </div>
+                        <div className="text-sm">Code viewer | {new Date().toLocaleDateString()}</div>
+                    </header>
+                    {/* Tabs */}
+                    <nav className="bg-white p-4 flex gap-4 border-b">
+                        <button className="text-blue-600 font-semibold border-b-2 border-blue-600">Menu</button>
+                        <button className="text-gray-600">Order History</button>
+                        <button className="text-gray-600">Reports</button>
+                    </nav>
+                    {/* Main Content */}
+                    <div className="flex p-6 gap-6">
+                        {/* Menu Section */}
+                        <div className="w-2/3">
+                            <input 
+                                type="text" 
+                                value={searchTerm} 
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="w-full p-2 border rounded mb-4"
+                                placeholder="Search menu items..."
+                            />
+                            {categories.map(category => (
+                                <div key={category} className="mb-4">
+                                    <button 
+                                        onClick={() => toggleCategory(category)}
+                                        className="w-full bg-[#8B4513] text-white p-2 rounded flex justify-between items-center"
+                                    >
+                                        <span>{category}</span>
+                                        <span>{expandedCategories[category] ? "▼" : "▲"}</span>
+                                    </button>
+                                    {expandedCategories[category] && (
+                                        <div className="mt-2 grid grid-cols-2 gap-4">
+                                            {filteredMenu
+                                                .filter(([_, item]) => item.category === category)
+                                                .map(([name, item]) => (
+                                                    <MenuItem 
+                                                        key={name} 
+                                                        name={name} 
+                                                        price={item.price} 
+                                                        isPizza={item.isPizza}
+                                                        addToOrder={addToOrder}
+                                                    />
+                                                ))}
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                        {/* Order Summary Section */}
+                        <div className="w-1/3">
+                            <OrderSummary 
+                                order={order} 
+                                total={total}
+                                clearOrder={clearOrder} 
+                                submitOrder={submitOrder}
+                                printOrder={printOrder}
+                            />
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        try {
+            const root = ReactDOM.createRoot(document.getElementById('root'));
+            root.render(<App />);
+        } catch (error) {
+            console.error("Error rendering React app:", error);
+            document.getElementById('root').innerHTML = "<p class='text-red-500 text-center'>Error loading the application. Please check the console for details.</p>";
+        }
+    </script>
+</body>
+</html>
